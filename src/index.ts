@@ -2,10 +2,19 @@ import { Hono } from "hono";
 import { poweredBy } from "hono/powered-by";
 import { prettyJSON } from "hono/pretty-json";
 import * as cheerio from "cheerio";
+import { cache } from "hono/cache";
 
 const app = new Hono();
 
 app.use("*", poweredBy(), prettyJSON());
+
+app.get(
+  "*",
+  cache({
+    cacheName: "payment-gateway-status",
+    cacheControl: "public, max-age=60",
+  })
+);
 
 async function statusPageStatus(url: string) {
   try {
@@ -111,6 +120,43 @@ function clearText(text: string) {
   return text.replace(/\t|\n/g, "");
 }
 
+function searchChild(data: any, name: string) {
+  let result = null;
+  data.forEach((item: any) => {
+    item.children.forEach((child: any) => {
+      if (
+        child.name
+          .toLowerCase()
+          .replace(/\s/g, "-")
+          .replace(/---/g, "-")
+          .replace(/--/g, "-") ===
+        name
+          .toLowerCase()
+          .replace(/\s/g, "-")
+          .replace(/---/g, "-")
+          .replace(/--/g, "-")
+      ) {
+        result = child;
+      }
+    });
+  });
+
+  if (!result) {
+    return {
+      data: {
+        message: "Data not found",
+      },
+      code: 404,
+    };
+  }
+
+  if (result.status === "Operational") {
+    return { data: result, code: 200 };
+  }
+
+  return { data: result, code: 500 };
+}
+
 // Route
 app.get("/", (c) => {
   return c.json({
@@ -125,9 +171,25 @@ app.get("xendit", async (c) => {
   return c.json(data);
 });
 
+app.get("xendit/:name", async (c) => {
+  const name = c.req.param("name");
+  const data = await statusPageStatus("https://status.xendit.co/");
+  const result = searchChild(data, name);
+
+  return c.json(result.data, result.code);
+});
+
 app.get("duitku", async (c) => {
   const data = await statusPageStatus("https://duitku.statuspage.io/");
   return c.json(data);
+});
+
+app.get("duitku/:name", async (c) => {
+  const name = c.req.param("name");
+  const data = await statusPageStatus("https://duitku.statuspage.io/");
+  const result = searchChild(data, name);
+
+  return c.json(result.data, result.code);
 });
 
 app.get("midtrans", async (c) => {

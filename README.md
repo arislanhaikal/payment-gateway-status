@@ -17,18 +17,20 @@ I don't know, is there have official API from payment gateway to check this. But
 To check the status of all payment channels, simply access:
 
 ```
-http://localhost:8787
+for xendit: http://localhost:8787/xendit
+for duitku: http://localhost:8787/duitku
+for midtrans: http://localhost:8787/midtrans
 ```
 
 ### Check a Specific Payment Channel
 
-To retrieve the status of a specific payment channel by ID:
+To retrieve the status of a specific payment channel by payment channel:
 
 ```
-http://localhost:8787/:id
+http://localhost:8787/xendit/:name
 ```
 
-Example `http://localhost:8787/core-api`
+Example `http://localhost:8787/xendit/virtual-account-mandiri`
 
 ## Quick Start
 
