@@ -1,12 +1,13 @@
 import { Hono } from "hono";
 import { poweredBy } from "hono/powered-by";
 import { prettyJSON } from "hono/pretty-json";
-import * as cheerio from "cheerio";
 import { cache } from "hono/cache";
+import { trimTrailingSlash } from "hono/trailing-slash";
+import * as cheerio from "cheerio";
 
 const app = new Hono();
 
-app.use("*", poweredBy(), prettyJSON());
+app.use("*", poweredBy(), prettyJSON(), trimTrailingSlash());
 
 app.get(
   "*",
