@@ -9,13 +9,13 @@ const app = new Hono();
 
 app.use("*", poweredBy(), prettyJSON(), trimTrailingSlash());
 
-app.get(
-  "*",
-  cache({
-    cacheName: "payment-gateway-status",
-    cacheControl: "public, max-age=60",
-  })
-);
+// app.get(
+//   "*",
+//   cache({
+//     cacheName: "payment-gateway-status",
+//     cacheControl: "public, max-age=60",
+//   })
+// );
 
 async function statusPageStatus(url: string) {
   try {
@@ -27,7 +27,7 @@ async function statusPageStatus(url: string) {
     const gatewayStatus: {
       name: string;
       status: string;
-      children: [{ name: string; status: string }];
+      children: { name: string; status: string }[];
     }[] = [];
 
     $(".component-container").each((i, element) => {
@@ -51,11 +51,11 @@ async function statusPageStatus(url: string) {
       const mainComponentObj: {
         name: string;
         status: string;
-        children?: { name: string; status: string }[];
+        children: { name: string; status: string }[];
       } = {
         name: mainComponentName,
         status: mainComponentStatus,
-        children: [] as { name: string; status: string }[],
+        children: [],
       };
 
       // Scrape child components if any
@@ -121,10 +121,21 @@ function clearText(text: string) {
   return text.replace(/\t|\n/g, "");
 }
 
-function searchChild(data: any, name: string) {
-  let result = null;
-  data.forEach((item: any) => {
-    item.children.forEach((child: any) => {
+interface Child {
+  name: string;
+  status: string;
+}
+
+interface Item {
+  name: string;
+  status: string;
+  children: Child[];
+}
+
+function searchChild(data: Item[], name: string) {
+  let result: Child | null = null;
+  for (const item of data) {
+    for (const child of item.children) {
       if (
         child.name
           .toLowerCase()
@@ -139,8 +150,8 @@ function searchChild(data: any, name: string) {
       ) {
         result = child;
       }
-    });
-  });
+    }
+  }
 
   if (!result) {
     return {
@@ -175,9 +186,13 @@ app.get("xendit", async (c) => {
 app.get("xendit/:name", async (c) => {
   const name = c.req.param("name");
   const data = await statusPageStatus("https://status.xendit.co/");
+
+  if (!data) {
+    return c.json({ message: "Data not found" }, 404);
+  }
   const result = searchChild(data, name);
 
-  return c.json(result.data, result.code);
+  return c.json(result.data, { status: result.code });
 });
 
 app.get("duitku", async (c) => {
@@ -188,9 +203,14 @@ app.get("duitku", async (c) => {
 app.get("duitku/:name", async (c) => {
   const name = c.req.param("name");
   const data = await statusPageStatus("https://duitku.statuspage.io/");
+
+  if (!data) {
+    return c.json({ message: "Data not found" }, 404);
+  }
+
   const result = searchChild(data, name);
 
-  return c.json(result.data, result.code);
+  return c.json(result.data, { status: result.code });
 });
 
 app.get("midtrans", async (c) => {
@@ -206,7 +226,7 @@ app.get("midtrans/:id", async (c) => {
     return c.json({ message: "Data not found" }, 404);
   }
 
-  if (data.status === "Operational") {
+  if (!Array.isArray(data) && data.status === "Operational") {
     return c.json(data, 200);
   }
 
