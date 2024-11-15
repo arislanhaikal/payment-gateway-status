@@ -9,13 +9,13 @@ const app = new Hono();
 
 app.use("*", poweredBy(), prettyJSON(), trimTrailingSlash());
 
-// app.get(
-//   "*",
-//   cache({
-//     cacheName: "payment-gateway-status",
-//     cacheControl: "public, max-age=60",
-//   })
-// );
+app.get(
+  "*",
+  cache({
+    cacheName: "payment-gateway-status",
+    cacheControl: "public, max-age=60",
+  })
+);
 
 async function statusPageStatus(url: string) {
   try {
